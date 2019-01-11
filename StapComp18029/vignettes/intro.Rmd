@@ -1,0 +1,931 @@
+---
+title: "Introduction to Statcomp"
+author: 'Yuhui Yang'
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to StatComp}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## 2019-09-14
+
+ Question.1
+
+Sampling from a finite population
+
+(Example 3.1 of Statistical Computing with R)
+
+ Answer
+ 
+1.toss some coins
+
+```{r }
+sample(0:1,size=10,replace=TRUE)
+```
+
+2.choose some lottery numbers 
+```{r }
+sample(1:100,size=6,replace=FALSE)
+```
+3.permutation of leters a-z
+```{r }
+sample(letters,size=26)  # sample(letters,size=length(letters))
+```
+4.sample from a multinomial distribution
+```{r }
+x <- sample(1:3,size=100,replace=TRUE,prob=c(0.2,0.3,0.5))
+x
+table(x)
+```
+
+ Question.2
+
+Inverse transform method, continuous case.
+
+(Example 3.2 of Statistical Computing with R)
+
+This example uses the inverse transform method to simulate a random sample from the distribution with density $f_{X}(x)=3x^2$, $0<x<1$.
+
+ Answer
+
+Here $F_X(x)=x^3$ for $0<x<1$, and $F^{-1}_{X}(u)=u^1/3$. Generate all $n$ required random uniform numbers as vector $u$. Then u^(1/3) is a vector of length $n$ containing the sample $x_1,...,x_n$.
+
+```{r }
+n <- 1000
+u <- runif(n)
+x <- u^(1/3)
+hist(x,prob = TRUE,main=expression(f(x)==3*x^2))  #density histogram of sample
+y <- seq(0,1,0.01)
+lines(y,3*y^2)  #density curve f(x)
+```
+
+
+ Question.3
+The Fisher iris data set gives four measurements on observations from three
+species of iris. The first few cases in the iris data are shown below.The iris data is an example of a data frame object. It has 150 cases in rows and 5 variables in columns. After loading the data, variables can be referenced by $name (the column name), by subscripts like a matrix, or by position using the [[ ]] operator. The list of variable names is returned by names. Some examples with output are shown below.
+
+(Example 1.1 of Statistical Computing with R)
+
+ Answer
+```{r }
+names(iris)
+table(iris$Species)
+w <- iris[[2]]  # Sepal.Width
+y <- subset(iris, Species == "versicolor",select = Petal.Length)
+summary(y)
+```
+
+ Question.4
+
+Draw three-dimensional images.
+
+ Answer
+
+```{r }
+f <- function(x,y) {
+z <- (1/(2*pi)) * exp(-.5 * (x^2 + y^2)) }
+y <- x <- seq(-3, 3, length= 50)
+z <- outer(x, y, f) #compute density for all (x,y)
+persp(x, y, z, theta = 45, phi = 30, expand = 0.6, ltheta = 120, shade = 0.75, ticktype = "detailed", xlab = "X", ylab = "Y", zlab = "f(x, y)",col="lightblue")
+```
+
+
+## 2018-09-21
+
+ Exercises 3.5
+
+A discrete random variable X has probability mass function
+\[
+x\quad\quad 0\quad 1\quad\quad 2\quad\quad 3\quad\quad 4 \\
+p(x)\quad 0.1\quad 0.2\quad 0.2\quad 0.2\quad 0.3\quad 
+\]
+Use the inverse transform method to generate a random sample of size 1000 from the distribution of $X$. Construct a relative frequency table and compare the empirical with the theoretical probabilities. Repeat using the R sample function.
+
+ Answer
+
+1.Inverse Transform method
+
+Algorithm:
+
+Step1 :Generate a random $u$ from Uniform(0,1)
+
+Step2 :Deliver $x_i$ where $F_X(x_{i-1})<u<= F_X(x_i)$
+
+```{r }
+set.seed(1234)
+n <- 1000
+u <- runif(n)
+x <- c(0,1,2,3,4)
+p <- c(0.1,0.2,0.2,0.2,0.3)
+cp <- cumsum(p)
+x.sample <- x[findInterval(u,cp)+1]
+table(x.sample)/n # calculate the frequency
+```
+
+The empirical probabilities is very close to the theoretical probabilities.
+
+\
+
+2.Using "sample" function
+
+```{r }
+set.seed(12345)
+x.sample2 <- sample(x,size=n,replace=TRUE,prob=p)
+table(x.sample2)/n
+```
+
+The sample frequency obtained by using the "sample" function is about the same as the probability.
+
+
+ Exercises 3.7
+ 
+Write a function to generate a random sample of size n from the Beta(a,b) distribution by the acceptance-rejection method. Generate a random sample of size 1000 from the Beta(3,2) distribution. Graph the histogram of the sample with the theoretical Beta(3,2) density superimposed.
+
+ Answer
+
+We know that the density function of beta distribution is:
+\[
+f(x,\alpha,\beta)=\frac{1}{B(\alpha,\beta)}x^{\alpha-1}(1-x)^{\beta-1};\quad \quad 0<x<1
+\]
+So the density function of Beta(3,2) is :
+\[
+f(x)=12x^2(1-x)
+\]
+Thus we choose the envelop function :
+\[
+g(x)～U(0,1)  \quad and\quad c=12
+\]
+
+```{r }
+n <- 1000
+x <- numeric(n)
+i <- 0
+while( i<=n ){
+  u <- runif(1)
+  y <- runif(1)  # random variate from g
+  if (u < y^2*(1-y)){
+    x[i] <-y 
+    i <- i+1
+  }
+}
+
+hist(x,breaks=seq(0,1,0.1),prob=TRUE,main=expression(f(x)==12*x^2*(1-x)))
+z <- seq(0,1,0.01)
+lines(z,12*z^2*(1-z))
+```
+
+The histogram coincides with the real density curve ($f(x)=12x^2(1-x)$) , indicating that the above process is correct.
+
+ Exercises 3.12
+
+Simulate a continuous Exponential-Gamma mixture. Suppose that the rate parameter $Λ$ has Gamma$(r,β)$ distribution and $Y$ has $Exp(Λ)$ distribution. That is, $(Y|Λ = λ) ∼ fY(y|\lambda) = λe−λy$ . Generate 1000 random observations from this mixture with $r = 4$ and $β = 2$.
+
+ Answer
+ 
+```{r }
+n <- 1000
+r <- 4
+beta <- 2
+lambda <- rgamma(n,r,beta)
+y <- rexp(n,lambda)
+y
+```
+
+
+
+## 2018-9-30
+
+ Exercises 5.4
+
+Write a function to compute a Monte Carlo estimate of the $Beta(3, 3)$ cdf, and use the function to estimate $F(x)$ for $x = 0.1, 0.2, . . . , 0.9.$ Compare the estimates with the values returned by the $pbeta$ function in R.
+
+
+ Answer
+\
+The density function of Beta(3,3) is :
+\[
+f(t;3,3)=\frac{1}{B(3,3)}t^{2}(1-t)^{2}
+\]
+
+so the CDF of $Beta(3,3)$ :
+
+$$
+\begin{align}
+F(x;3,3)
+& =  \int_0^{x}\frac{1}{B(3,3)}t^{2}(1-t)^{2}\ dt \\
+& = \int_0^{x}\frac{1}{x}\{x\frac{1}{B(3,3)}t^{2}(1-t)^{2}\}\ dt \\
+& = E_{Y}[x\frac{1}{B(3,3)}Y^2(1-Y)^2]
+\end{align}
+$$
+
+Where $Y\sim U(0,x)$.
+```{r }
+set.seed(1234)
+x <- seq(0.1,0.9,0.1)
+f <- function(x) 1/beta(3,3)*x^2*(1-x)^2  # density function
+
+for(i in 1:9){
+  U <- runif(10000,min=0,max=x[i])
+  F[i] <- mean(x[i]*f(U))  # CDF
+}
+round(F,5)
+pbeta(x,3,3)
+
+plot(F,col=2)
+points(pbeta(x,3,3),col=4,pch=3)
+```
+
+It can be seen from the diagram that the data generated by the two methods are basically the same, which shows that our method is correct.
+
+
+ Exercises 5.9
+The Rayleigh density is
+\[
+f(x)=\frac{x}{\sigma^2}e^{{-x^2}/(2\sigma^2)}  \quad \quad x\geq 0,\sigma>0
+\]
+Implement a function to generate samples from a Rayleigh($σ$) distribution,using antithetic variables. What is the percent reduction in variance of $\frac{X+X′}{2}$ compared with $\frac{X1+X2}{2}$ forindependent $\frac{X_1+X_2}{2}$
+
+ Answer
+
+The distribution function of Rayleigh density is :
+\[
+F(x)=1-e^{-\frac{x^2}{2\sigma^2}} \quad \quad x\in[0,+\infty)
+\]
+
+Through the Inverse transformation method, we konw that 
+\[
+X\overset{d}=F^{-1}_{X}(U)=\sqrt{-2\sigma^2ln(1-U)}
+\]
+
+Note that if $U$ is uniformaly distributed on $(0,1)$ then $1-U$ has the same distribution as $U$, but they are negatively correlated.Then we replace $U$ with $1-U$:
+\[
+X^{'} \overset{d}=F^{-1}_{X}(1-U)=\sqrt{-2\sigma^2ln(U)}
+\]
+so we generated equivalent samples from $F^{-1}_{X}(U)$ and $F^{-1}_{X}(1-U)$:
+\[
+x_j=\sqrt{-2\sigma^2ln(1-u_j)} \quad  x_j^{'}=\sqrt{-2\sigma^2ln(u_j)},\quad \quad j=1,2,...,\frac{n}{2}
+\]
+where $u_j\sim U(0,1)$.
+
+We set the value of $\sigma$ to $1,4,20$ respectively.
+
+```{r }
+# We set the value of sigma to 1,4,20 respectively.
+set.seed(123456)
+n <- 1000000
+sigma <- c(1,4,20,200)
+for(i in 1:4){
+  u1 <- runif(n/2)
+  u2 <- runif(n/2)
+  T1 <- 0.5*(sqrt(-2*sigma[i]^2*log(1-u1))+sqrt(-2*sigma[i]^2*log(1-u2))) # independent X1 and X2 
+  T2 <- 0.5*(sqrt(-2*sigma[i]^2*log(1-u1))+sqrt(-2*sigma[i]^2*log(u1)))  # negative correlation fo X and X'
+  V1 <- var(T1)
+  V2 <- var(T2)
+  print((V1-V2)/V1*100)  # percent reduction in variance
+}
+```
+So the percent reduction in variance of $\frac{X+X^{'}}{2}$ compare with  $\frac{X_1+X_2}{2}$ is about $94.7$%, no matter what the $\sigma$ value is.
+
+ Exercises 5.13
+ 
+Find two importance functions $f1$ and $f2$ that are supported on $(1,\infty)$ and
+are ‘close’ to
+\[
+g(x)=\frac{x^2}{\sqrt{2\pi}}e^{-x^2/2}, \quad\quad x>1
+\]
+Which of your two importance functions should produce the smaller variance in estimating
+\[
+\int_0^{\infty}\frac{x^2}{\sqrt{2\pi}}e^{-x^2/2}dx
+\]
+by importance sampling ? Explain.
+
+Answer
+\
+The candidates for the importance functions are:
+\[
+f_1(x) = \frac{1}{\pi(1+(x-1.5)^2)},\quad\quad x>1
+\]
+\[
+f_2(x)=\frac{1}{\sqrt{2\pi}},\quad\quad x>1
+\]
+
+
+```{r }
+x <- seq(1,10,0.01)
+g <- x^2/sqrt(2*pi)*exp(-x^2/2)
+f1 <- 2/pi/(1+(x-1.5)^2)
+f2 <- 0.5
+plot(x,g,type="l",ylim=c(-0.1,0.8))
+points(x,f1,type="l",col=4)
+points(x,rep(f2,length(x)),type="l",col=6)
+legend(8,0.2,c("g","f1","f2"),col=c(1,4,6),lty=c(1,1,1))
+```
+
+
+```{r }
+plot(x,g/f1,type="l",col=2,ylim=c(-1,1))
+points(x,g/f2,type="l",col=3)
+legend(8,1,c("g/f1","g/f2"),col=c(2,3),lty=c(1,1))
+```
+
+Explain:
+
+The ratio of $g(x)/f_1(x)$ is less volatile and tends to a constant compared with the ratio of $g(x)/f_2(x)$, so the variance of 
+
+The function that corresponds to the most nearly constant ratio $g(x)/f(x)$ appears to be $f1$, which can be seen clearly in the Figure above.
+
+ Exercises 5.14
+Obtain a Monte Carlo estimate of
+\[
+\int_1^{\infty}\frac{x^2}{\sqrt{2\pi}}e^{-\frac{x^2}{2}}dx
+\]
+by importance sampling.
+
+ Answer
+
+According to Exercises 5.13, we choose the importance function $$f_1(x)=\frac{1}{\pi(1+(x-1.5)^2)} \sim Cauchy(1.5,1)$$
+
+then we estimated the Monte Carlo integration by importance sampling:
+\[
+\begin{aligned}
+\theta=\int_1^{\infty}\frac{x^2}{\sqrt{2\pi}}e^{-\frac{x^2}{2}}
+&=\int_1^{\infty}g(x)dx \\
+&= \int_1^{+\infty} \frac{g(x)}{f_1(x)} f_1(x)dx \\
+&= E[\frac{g(X)}{f_1(X)}]  
+\end{aligned}
+\]
+where $X\sim f_1(X)=Cauchy(1.5,1)$
+
+so $$\hat{\theta}=\frac{1}{n}\sum_{i=1}^{n}\frac{g(X_i)}{f_1(X_i)}, \quad\quad X_i\sim f_1(X)=Cauchy(1.5,1)$$
+```{r }
+set.seed(5679)
+n <- 100000
+x <- rcauchy(n,location=1.5,scale=1)
+g <- x^2/sqrt(2*pi)*exp(-x^2/2)
+f1 <- 2/pi/(1+(x-1.5)^2)
+theta.hat <- mean(g/f1)
+round(theta.hat,3)
+```
+
+Thus we obtain the MOnta Carlo estimate of 
+
+$\int_1^{\infty}\frac{x^2}{\sqrt{2\pi}}e^{-x^2/2}dx$ is about $0.499$.
+
+
+## 2018-10-12
+ Exercises 6.9
+
+Let $X$ be a non-negative random variable with $\mu = E[X] < \infty$.For a random sample $x_1,x_2,...,x_n$  from the distribution of $X$,the Gini ratio is defined by
+$$
+G=\frac{1}{2n^2\mu}\sum_{j=1}^{n}\sum_{i=1}^{n}|x_i-x_j|.
+$$
+The Gini ratio is applied in economics to measure inequality in income dis- tribution (see e.g. [163]). Note that $G$ can be written in terms of the order statistics $x(i)$ as
+$$
+G=\frac{1}{n^2\mu}\sum_{i=1}^{n}(2i-n-1)x_{(i)}.
+$$
+If the mean is unknown, let $\hat{G}$ be the statistic $G$ with $\mu$ replaced by $\bar{x}$. Estimate by simulation the mean, median and deciles of $\hat{G}$ if $X$ is standard lognormal. Repeat the procedure for the uniform distribution and Bernoulli(0.1). Also construct density histograms of the replicates in each case.
+
+ Answer
+
+
+```{r }
+m <- 1000;n <- 100;
+set.seed(1234)
+G <- numeric(m)
+for(i in 1:m){
+  x <- rlnorm(n)   # standard lognormal
+  x <- sort(x)
+  mu.hat <- mean(x)
+  G[i] <- 1/n^2/mu.hat*sum((2*(1:n)-n-1)*x)
+}
+mean(G)
+median(G)
+quantile(G,seq(0.1,0.9,0.1))
+```
+Repeat the procedure for the uniform distribution $U(0,1)$ and Bernoulli $B(0.1)$:
+```{r }
+m <- 1000;n <- 100;
+set.seed(1234)
+G1 <-G2 <- numeric(m)
+for(i in 1:m){
+  x1 <- runif(n)  # uniform distribution
+  x1 <- sort(x1)
+  x2 <- rbinom(n,1,0.1)  # Bernoulli(0.1)
+  x2 <- sort(x2)
+  mu.hat1 <- mean(x1)
+  mu.hat2 <- mean(x2)
+  G1[i] <- 1/n^2/mu.hat1*sum((2*(1:n)-n-1)*x1)
+  G2[i] <- 1/n^2/mu.hat2*sum((2*(1:n)-n-1)*x2)
+
+}
+print(c(mean(G1),median(G1)))  ## uniform distribution
+print(c(mean(G2),median(G2)))  ## Bernoulli(0.1)
+quantile(G1,seq(0.1,0.9,0.1))  ## uniform distribution
+quantile(G2,seq(0.1,0.9,0.1))  ## Bernoulli(0.1)
+
+# PLOT
+hist(G,xlim=c(0,1),ylim=c(0,15),freq=FALSE)
+hist(G1,xlim=c(0,1),ylim=c(0,15),freq=FALSE)
+hist(G2,xlim=c(0,1),ylim=c(0,15),freq=FALSE)
+```
+
+ Exercises 6.10
+
+Construct an approximate 95% confidence interval for the Gini ratio $\gamma=E[G]$ if X is lognormal with unknown parameters. Assess the coverage rate of the estimation procedure with a Monte Carlo experiment.
+
+Answer
+
+1. Generate X and calculate the mean of X :$\mu=E(X)$.
+
+Since X is standard lognormal, we suppose that:
+$$
+ln(X)\sim N(a,b)
+$$
+so the expectation of X is:
+$$
+\mu=E(X)=e^{a+b^2/2}
+$$
+
+2. Estimate coverage probality with a Monte Carlo experiment.
+
+We generate $x_1,...,x_n \quad iid$ from $X$, thus we can draw the $G_i$.Repeat this procedure $m$ times, we got $G_1,...,G_m$. Then we can estimate the expection and standard variance of G:
+
+$$
+\hat{G}=\frac{1}{m}\sum_{i=1}^{m}G_i \quad \quad \hat{\sigma_G}=\frac{1}{m-1}\sum_{i=1}^{m}(G_i-\bar{G_i})^2
+$$
+So the $1-alpha$% confidence interval of $G$ is :
+$$
+[g_1,g_2]=[\hat{G}+U_{\frac{\alpha}{2}}\hat{\sigma}_{G}\quad,\quad \hat{G}+U_{1-\frac{\alpha}{2}}\hat{\sigma}_{G}]
+$$
+
+3. Estimate the coverage rate with a Monte Carlo experiment.
+
+$$
+CP=\frac{1}{N}\sum_{i=1}^{N}1({g_1}^{(i)}<G_0<{g_2}^{(i)})
+$$
+
+```{r }
+# function to calculate the confidence interval
+confidence.interval <- function(m,n,a,b,alpha){
+  G <- numeric(m)
+  for(i in 1:m){
+    x <- rlnorm(n,meanlog=a,sdlog=b)
+    x <- sort(x)
+    mu.hat <- mean(x)
+    G[i] <- 1/n^2/mu.hat*sum((2*(1:n)-n-1)*x)
+  }
+  G.hat <- mean(G)
+  G.sd <- sd(G)
+  g1 <-G.hat-qnorm(1-alpha/2)*G.sd
+  g2 <-G.hat+qnorm(1-alpha/2)*G.sd
+  return(c(g1=g1,g2=g2))
+}
+
+m <- 100;n <- 100;N <-1000;n0 <- 100;alpha=0.05
+set.seed(123)
+p <- numeric(N)
+for(i in 1:N){
+  a <- sample(1:10,size=1,replace=TRUE)
+  b <- 0.1
+  g <-confidence.interval(m,n,a=a,b=b,alpha=alpha) 
+  mu <- exp(a+0.5*b^2) 
+  x <- rlnorm(n0,meanlog=a,sdlog=b)
+  x<-sort(x)
+  G0 <- 1/n0^2/mu*sum((2*(1:n0)-n0-1)*x)  # the real value of G
+
+  if(G0<=g[2] && G0>=g[1]){
+    p[i] <- 1
+  }else{
+    p[i] <- 0
+  }
+}
+mean(p)
+```
+So the exception of coverage probability is about $0.936$.
+
+Exercises 6.B
+
+Tests for association based on Pearson product moment correlation $\rho$, Spearman’s rank correlation coefficient $\rho_s$, or Kendall’s coefficient $\tau$, are implemented in $cor.test$. Show (empirically) that the nonparametric tests based on $\rho_s$ or $\tau$ are less powerful than the correlation test when the sampled distribution is bivariate normal. Find an example of an alternative (a bivariate distribution $(X,Y)$ such that $X$ and $Y$ are dependent) such that at least one of the nonparametric tests have better empirical power than the correlation test against this alternative.
+
+ Answer
+
+```{r }
+require(mvtnorm)
+set.seed(123)
+m <- 500 # Number of Monte Carlo trials
+n <- 100
+alpha <- 0.05
+c <- 2
+df <- 4
+
+tmp <- matrix(rnorm(c^2), c, c)
+mcov <- tcrossprod(tmp, tmp) + diag(0.5, c)
+power_rho <- power_rhos <- power_tau <- numeric(m)
+for(i in 1:m){
+  tmp <- matrix(rnorm(c^2), c, c)
+  mcov <- tcrossprod(tmp, tmp) + diag(0.5, c)
+  bvtn <- rmvt(n,sigma=mcov, df = df,delta=1:2) 
+  x <- bvtn[,1]
+  y = bvtn[,2]
+  power_rho[i] <- cor.test(x,y,method="pearson")$p.value<0.05
+  power_rhos[i] <- cor.test(x,y,method="kendall")$p.value<0.05
+  power_tau[i] <- cor.test(x,y,method="spearman")$p.value<0.05
+}
+print(c(mean(power_rho),mean(power_rhos),mean(power_tau)),3)
+```
+
+The results shows that in our simulation the power of $\rho_s$ is $0.778$, which is higer than the power of $\rho$ power=0.766.
+
+
+## 2018-12-14
+
+Exercise 3
+
+Use both for loops and \textbf{lapply()} to fit linear models to the \textbf{mtcars} using the formulas stored in this list:
+```{r}
+formulas <- list(
+  mpg ~ disp,
+  mpg ~ I(1 / disp),
+  mpg ~ disp + wt,
+  mpg ~ I(1 / disp) + wt
+)
+```
+
+Answer
+
+(1)Using loops:
+```{r}
+lf1 <- vector("list", length(formulas))
+for (i in seq_along(formulas)){
+  lf1[[i]] <- lm(formulas[[i]], data = mtcars)
+}
+lf1
+```
+
+(2)Using $\textbf{lapply()}$:
+
+```{r}
+# with two version
+
+la1 <- lapply(formulas, lm, data = mtcars)
+la2 <- lapply(formulas, function(x) lm(formula = x, data = mtcars))
+c(la1,la2)
+```
+
+Obviously, two results are same.
+
+<br/><br/>
+
+Exercise 4
+
+Fit the model \textbf{mpg ~ disp} to each of the bootstrap replicates of \textbf{mtcars} in the list below by using a for loop and \textbf{lapply()}. Can you do it without an anonymous function?
+```{r}
+bootstraps <- lapply(1:10, function(i){
+  rows <- sample(1:nrow(mtcars), rep = TRUE)
+  mtcars[rows, ]
+})#eturns a list of the same length as mtcars
+```
+
+Answer
+
+```{r}
+## for loop
+lf <- vector("list", length(bootstraps))
+for (i in seq_along(bootstraps)){
+  lf[[i]] <- lm(mpg ~ disp, data = bootstraps[[i]])
+}
+lf
+```
+
+```{r}
+# lapply without anonymous function
+la <- lapply(bootstraps, lm, formula = mpg ~ disp)
+la
+```
+
+Exercise 5
+
+For each model in the previous two exercises, extract $\mathbf{R^2}$ using the function below.
+```{r}
+rsq <- function(mod) summary(mod)$r.squared
+```
+
+ Answer
+
+For the models in exercise 1:
+```{r}
+sapply(la1, rsq)
+sapply(la2, rsq)
+sapply(lf1, rsq)
+```
+
+For the models in exercise 2:
+```{r}
+sapply(la, rsq)
+sapply(lf, rsq)
+```
+
+
+Exercise 3
+
+The following code simulates the performance of a t-test for
+non-normal data. Use \textbf{sapply()} and an anonymous function to extract the p-value from every trial.
+```{r}
+trials <- replicate(100,t.test(rpois(10, 10), rpois(7, 10)),
+                    simplify = FALSE)
+```
+Extra challenge: get rid of the anonymous function by using
+[[ directly.
+
+Answer
+
+```{r}
+# anonymous function:
+sapply(trials, function(test) test$p.value)
+sapply(trials, '[[', i = "p.value") 
+```
+
+Exercise 6
+
+Implement a combination of \textbf{Map()} and \textbf{vapply()} to create an \textbf{lapply()} variant that iterates in parallel over all of its inputs and stores its outputs in a vector (or a matrix). What arguments should the function take?
+
+ Answer
+
+This exercise is about working with a list of lists, like in the following example:
+```{r}
+library(parallel)
+testlist <- list(iris, mtcars, cars)
+lapply(testlist, function(x) vapply(x, mean, numeric(1)))
+```
+
+So we can get the same result with a more specialized function:
+```{r}
+lmapply <- function(X, FUN, FUN.VALUE, simplify = FALSE){
+  out <- Map(function(x) vapply(x, FUN, FUN.VALUE), X)
+  if(simplify == TRUE){return(simplify2array(out))}
+  out
+}
+lmapply(testlist, mean, numeric(1))
+```
+
+## 2018-11-16
+
+Exercises 8.1
+
+(1)Implement the two-sample Cram ́er-von Mises test for equal distributions as a permutation test. Apply the test to the data in Examples 8.1 and 8.2.
+
+(2).Design experiments for evaluating the performance of the NN, energy, and ball methods in various situations. (1)Unequal variances and equal expectations (2)Unequal variances and unequal expectations (3)Non-normal distributions: t distribution with 1 df (heavy-tailed distribution), bimodal distribution (mixture of two normal distributions) (4)Unbalanced samples (say, 1 case versus 10 controls)
+
+ Answer
+
+
+(1) 
+The Cramer-von Mises statistic, which estimates the integrated squared distance between the distributions, is defined by
+$$
+W2=\frac{mn}{(m+n)^2}[\sum_{i=1}^{n}(F_n(x_i)-G_n(x_i))^2+\sum(F_n(y_i)-G_n(y_i))^2]
+$$
+```{r }
+set.seed(1)
+# function : Cramer-von Mises statistic
+W2 <- function(x,y){
+  Fn <- ecdf(x) # ecdf function of f(x)
+  Gn <- ecdf(y) # ecdf function of g(x)
+  n <-length(x)
+  m <- length(y)
+ out <-  (sum(( Fn(x) - Gn(x))^2) + sum(( Fn(y) - Gn(y) )^2))*m*n/((m+n)^2)
+ return(out)
+}
+
+
+# Example 8.1
+data("chickwts")
+attach(chickwts)
+x <- as.vector(weight[feed == "soybean"])
+y <- as.vector(weight[feed == "linseed"]) 
+z <- c(x,y)
+n <- length(x)
+m <- length(y)
+
+R <- 999
+T.star <- numeric(R)
+T0 <- W2(x,y)
+
+# permutation 
+for(i in 1:R){
+  z.star<- sample(z,m+n,replace=FALSE)
+  x.star <- z.star[1:n]
+  y.star <- z.star[(n+1): (m+n)]
+  T.star[i] <- W2(x.star,y.star)
+}
+
+Tb <- c(T0,T.star)
+p.value <-mean(T0 <= Tb)
+print(p.value) # Exercise 8.1
+```
+
+$p.value > 0.05$, so in Exercise 8.1 the null hypothesis is not rejected.
+
+```{r }
+hist(T.star,density = FALSE,xlab="W2",ylab="Frequency",main="Histogram of W2 in Example 8.1")
+abline(v=T0,col="red",lty=1,lwd=3)
+```
+
+
+
+```{r }
+# Example 8.2
+x <- as.vector(weight[feed == "sunflower"])
+y <- as.vector(weight[feed == "linseed"])
+z <- c(x,y)
+n <- length(x)
+m <- length(y)
+
+R <- 999
+T.star <- numeric(R)
+T0 <- W2(x,y)
+
+# permutation 
+for(i in 1:R){
+  z.star<- sample(z,m+n,replace=FALSE)
+  x.star <- z.star[1:n]
+  y.star <- z.star[(n+1): (m+n)]
+  T.star[i] <- W2(x.star,y.star)
+}
+
+Tb <- c(T0,T.star)
+p.value <-mean(T0 <= Tb)
+print(p.value) # Exercise 8.2
+```
+
+$p.value < 0.05$, so so in Exercise 8.2 the null hypothesis is rejected.
+
+```{r }
+hist(T.star,density = FALSE,xlab="W2",ylab="Frequency",main="Histogram of W2 in Example 8.2",xlim=c(0,2))
+abline(v=T0,col="red",lty=1,lwd=3)
+```
+
+
+(2)Since energy test and ball statistic test for equal distributions can be directly achieved by energy and Ball package. We should first write the function of the NN test. Below is the variable definition and NN function.
+
+
+ Exercises 9.3
+
+Use the Metropolis-Hastings sampler to generate random variables from a standard Cauchy distribution. Discard the first 1000 of the chain, and compare the deciles of the generated observations with the deciles of the standard Cauchy distribution (see qcauchy or qt with df=1). Recall that a Cauchy(θ, η) distribution has density function
+
+$$
+f(x)=\frac{1}{\theta\pi(1+[(x-\eta)/\theta]^2)} \quad\quad -\infty<x<\infty,\quad\theta>0
+$$
+The standard Cauchy has the Cauchy(θ = 1, η = 0) density. (Note that the standard Cauchy density is equal to the Student t density with one degree of freedom.)
+
+ Answer
+
+
+```{r }
+set.seed(1)
+# density function of Cauchy(0,1)
+f <- function(x,theta=1,eta=0){
+  out <- 1/(pi * theta * (1+((x-eta)/theta)^2))
+  return(out)
+}
+m <- 100000
+x <- numeric(m)
+u <- runif(m)
+sigma <- 1
+x[1] <- runif(1,-40,40)
+k <- 0  # record rejection times
+
+for(i in 2:m){
+  xt <- x[i-1]
+  y <- rnorm(1, mean=xt, sd=sigma)
+  num <- f(y) * dnorm(xt,mean=y,sd=sigma)
+  den <- f(xt) * dnorm(y,mean=xt,sd=sigma)
+  if(u[i] <= min(num/den,1)) {
+    x[i] <- y
+  }else{
+    x[i] <- xt
+    k <- k+1
+  }
+}
+
+
+# rejection rate
+print(k/m)
+
+
+# plot the sample vs the time index.
+b <- 1001
+rest <- b:m
+par(mfrow=c(1,2))
+plot(rest,x[rest],type="l")
+hist(x[rest],probability=TRUE,breaks=100)
+par(mfrow=c(1,1))
+
+# compare the decilies
+Q.obser <- quantile(x[rest],seq(0,1,0.1))
+Q.expec <- qcauchy(seq(0,1,0.1))
+print(round(cbind(Q.obser , Q.expec ), 4)) 
+
+#qqplot
+x1 <- x[rest]
+a <- ppoints(1000)
+QR <- qcauchy(a)
+Q <- quantile(x1,a)
+qqplot(QR,Q,main="",xlab="Rayleigh Quantiles",ylab="Sample Quantiles",xlim=c(-20,20),ylim=c(-20,20))
+
+#qqline(obser, datax = FALSE, distribution = qcauchy,
+       #probs = c(0.1, 0.9), qtype = 7)
+```
+
+Since the value extemes at 0% and 100% quantile, so the QQ plot has poor effect both ends. 
+
+ Exercises 9.6
+
+Rao [220, Sec. 5g] presented an example on genetic linkage of 197 animals in four categories (also discussed in [67, 106, 171, 266]). The group sizes are (125, 18, 20, 34). Assume that the probabilities of the corresponding multinomial distribution are
+$$
+(\frac{1}{2}+\frac{\theta}{4},\frac{1-\theta}{4},\frac{1-\theta}{4},\frac{\theta}{4})
+$$
+
+Estimate the posterior distribution of θ given the observed sample, using one of the methods in this chapter.
+
+(For exercise 9.6, use the Gelman-Rubin method to monitor convergence of the chain, and run the chain until the chain has converged approximately to the target distribution according to $\hat{R} < 1.2.$)
+
+ Answer
+
+The posterior distribution of $\theta$ given $(x_1,...,x_4)$
+
+$$
+f(\theta|x)= \frac{197!}{125!18!20!34!}p_1^{x_1}p_2^{x_2}p_3^{x_3}p_4^{x_4}
+$$
+where 
+$p_1=\frac{1}{2}+\frac{\theta}{4},p_2=\frac{1-\theta}{4},p_3=\frac{1-\theta}{4},p_4=\frac{\theta}{4}$, and $\theta\in[0,1]$
+
+Use random walk Metropolis sampler with a uniform proposal distribution to generated the posterior disttibution of $\theta$.
+
+The candidate point $Y$ is accepted with probability
+$$
+\alpha(Y|X_t)=min(1,\frac{f(Y)}{f(X_t)})
+$$
+and,
+
+$$
+\frac{f(Y)}{f(X_t)}=\frac{
+(\frac{1}{2}+\frac{Y}{4})^{x_1}
+(\frac{1-Y}{4})^{x_2}
+(\frac{1-Y}{4})^{x_3}
+(\frac{Y}{4})^{x_4}
+}{
+(\frac{1}{2}+\frac{X_t}{4})^{x_1}
+(\frac{1-X_t}{4})^{x_2}
+(\frac{1-X_t}{4})^{x_3}
+(\frac{X_t}{4})^{x_4}
+}
+$$
+```{r }
+# function 
+f <- function(x,N){
+  if(x<0 || x>1){
+    return(0)
+  }else{
+  out <- (0.5+0.25*x)^N[1] * ((1-x)/4)^N[2] * ((1-x)/4)^N[3] * (x/4)^N[4]
+  return(out)
+  }
+}
+
+Num <- c(125,18,20,34)  ##  group sizes of 4  categories
+m <- 5000   ## length of the chain
+u <- runif(m)   ## for accept/reject step
+burn <- 1000    ## burn-in time
+theta <- numeric(m)  ## the chain
+width <- 0.2
+x[1] <- 0.5 
+k <- 0
+
+for(i in 2:m){
+  xt <- x[i-1]
+  y <- x[i-1] + runif(1,-width,width)
+  alpha <- min(1,f(y,N=Num)/f(xt,Num))
+  if(alpha >= u[i]){
+    x[i] <- y
+  }else{
+    x[i] <- x[i-1]
+    k <- k+1
+  }
+}
+
+# PLOT
+index <- burn:m
+x1 <- x[index]
+par(mfrow=c(1,2))
+plot(index,x1,type="l",xlab="",ylab="theta")
+hist(x[index])
+abline(v=mean(x[index]),col="red")
+print(mean(x[index])) # the estimate of theta
+```
+
+From the histogtam we can conculde that the estimate of $\theta$ is accurate.
